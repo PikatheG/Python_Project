@@ -85,7 +85,22 @@ def init_jetons():
 
     return plateau
 
-def affiche_jetons(listPos):
+#fonction pour simplifier le code de affiche_jetons(j, b)
+def case(sq : str)->str:
+    if sq == 'MT':
+        return '^'   
+    elif sq == 'MD':
+        return '⋅'
+    elif sq == 'LT':
+        return '*'
+    elif sq == 'LD':
+        return '+'
+    elif sq == '':
+        return ' '
+    else:
+        return sq
+
+def affiche_jetons(listPos: list, bonus:list) -> str:
     taille = 15
 
     #donner l'espacement de nos num de colonnes
@@ -100,6 +115,7 @@ def affiche_jetons(listPos):
 
     print()
 
+    #affichage des num de lignes et de leur objet
     for j in range(1,taille+1):
 
         print('   ', end = '')
@@ -108,24 +124,17 @@ def affiche_jetons(listPos):
         print('|')
 
         if j < 10:
-            print('0' + str(j) + ' ', end = '')
-            for k in range(taille):
-                print('|', end='')
-                if listPos[j-1][k] == '':
-                    print('   ', end='')
-                else:
-                    print(' '+listPos[j-1][k]+' ', end = '')
-            print('|')
+            lineNum = '0' + str(j)
         else:
-            print(str(j) + ' ', end = '')
-            for k in range(taille):
-                print('|', end='')
-                if listPos[j-1][k] == '':
-                    print('   ', end = '')
-                else:
-                    print(' '+listPos[j-1][k]+' ', end = '')
-            print('|')
-
+            lineNum = str(j)
+       
+        print(lineNum + ' ', end = '')
+        
+        for k in range(taille):
+            print('|', end='')    
+            print(case(listPos[j-1][k]) + case(bonus[j-1][k]) + ' ', end = '')
+        print('|')
+        
     print('   ', end = '')
     for l in range(taille):
         print('|---', end='')
