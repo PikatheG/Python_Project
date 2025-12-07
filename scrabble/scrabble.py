@@ -23,6 +23,8 @@ TAILLE_MARGE = 4  # taille marge gauche (qui contient les numéros de ligne)
 
 JOKER = '?'  # jeton joker
 
+tour = 1
+
 # ⚠ pas de variable globales, sauf cas exceptionnel
 
 
@@ -140,11 +142,6 @@ def affiche_jetons(listPos: list, bonus:list) -> str:
         print('|---', end='')
     print('|')
 
-
-#def affiche_jetons(j):
-
-
-
 # PARTIE 2 : La pioche ##########################
 
 def init_pioche_alea()->list:
@@ -177,37 +174,16 @@ def completer_main(main,sac):
     sac.remove(a)
   return main
 
-def completer_main(main,sac):
-  while len(main)<7:
-    a=ran.choice(sac)
-    main.append(a)
-    sac.remove(a)
-  return main
 
 def echanger(jetons,main,sac):
-    user=""
-    i=0
-    jetdef=[]
-    booli=False
-    while user!="stop" and i<7 and len(sac)>=1:
-        user=input("Quel jeton voulez vous échanger ? Saisissez stop pour arreter.")
-        if user in main:
-            jetdef.append(user)
-            main.remove(user)
-            i=i+1
-            booli=True
-        else:
-            print("Pas dans votre main. ERREUR")
-    completer_main(main, sac)
-    sac.extend(jetdef)
-    if booli:
-        return "échange reussi"
-    else:
-        return "échange échoué"
-
-
-
-
+    flag=False
+    if len(sac)<len(jetons):
+        print("Pas assez de lettre")
+    elif len(jetons)>=1:
+        flag=True
+    completer_main(main,sac)
+    sac.extend(jetons)
+    return flag
 
 
 # PARTIE 3 : CONSTRUCTIONS DE MOTS #############################################
@@ -240,22 +216,34 @@ def select_mot_longueur(motsfr : str, lgr : int) ->list:
 
     return motslen
 
-def mot_jouable(mot:str, ll: list)->bool:
-    ll2 = list(ll)
-    jokerCount = ll2.count(JOKER)
+def mot_jouable(mot:str, main: list, manque: int)->bool:
+    main2 = list(main)
+    jokerCount = main2.count(JOKER)
 
-    for i in mot:
-        if i not in ll2 and jokerCount == 0:
+    cpt = 0
+    
+    while cpt < len(mot):
+         
+        if mot[cpt] not in main2 and jokerCount == 0 and manque == 0:
             return False
-        elif i not in ll2 and jokerCount == 1 or jokerCount == 2:
+        
+        elif mot[cpt] not in main2 and (jokerCount == 1 or jokerCount == 2):
             jokerCount -= 1
+            main2.remove(JOKER)
+            
+        elif manque > 0 and mot[cpt] not in main2:
+            manque -= 1
+            
         else:
-            ll2.remove(i)
+            main2.remove(mot[cpt])
+            
+    return True
 
-def mots_jouables(motsfr : str, ll: list) -> list:
+
+def mots_jouables(motsfr : str, main: list, manque: int) -> list:
     motsPossibles = []
     for i in motsfr:
-        if mot_jouable(i, ll) == True:
+        if mot_jouable(i, main, manque) == True:
             motsPossibles.append(i)
 
     return motsPossibles
@@ -323,24 +311,86 @@ def meilleurs_mot(motsfr,ll,dico):
 
 #PARTIE5 ##################################################################
 
+def tour_joueur(indexJ,main,sac,dico,joueurs,score): 
 
-def tour_joueur(j,jetons,main,sac,dico,n,ll):
     user=""
-    print(affiche_jetons(plateau))
-    while user!="passer" and user!="échanger" and user!="proposer":
-        user=input("Que voulez faire ? \n~passer\n~échanger\n~proposer\n")
-        if user!="passer" and user!="échanger" and user!="proposer":
-            print("Saisissez à nouveau :\n")
-    if user=="échanger":
-        echanger(jetons, main, sac)
-    elif user=="proposer":
-        n=input("Proposez un mot :")
-        a=mot_jouable(n, ll)
-        if a==False:
-            print("Mot pas jouable")
-        else:
-            b=valeur_mot(n, dico)
-            print("La valeur de",n,"est",b)
+    usere=""
+    jetons=[]
+    flag=False
+    joueuractu=joueurs[indexJ]
+    print(main)
+    while user!="P" and user!="E" and user!="S":
+        user=input("Que voulez faire ? \n~passer (P) \n~échanger (E)\n~proposer (S)\n ")
+        user = user.upper()
+        if user!="P" and user!="E" and user!="S":
+            print("Erreur. Saisissez à nouveau.")
+
+        elif user.upper() == "E":
+            p=0
+            jetons=[]
+            usere=input("Saisissez une lettre. Entrer stop pour arreter la saisie : ")
+            usere=usere.upper()
+            while usere != "STOP" and len(main)>=1 and 7-len(main)<len(sac) and p<7:
+                if usere in main:
+                    jetons.append(usere)
+                    main.remove(usere)
+                    p=p+1
+                elif usere not in main :
+                    print("Erreur. Pas dans votre main. Rentrez une nouvelle lettre.")
+                usere=input("Nouvelle lettre : ")
+                usere=usere.upper()
+            print('Vous avez echangé.')
+            echanger(jetons,main,sac)
+            flag=True
+
+        elif user.upper() == "S":
+            direction=""
+            while direction!="H" and direction!="V":
+                direction=input("Saisissez H pour placer horizontalment votre mot.\nSaisissez V pour le mettre à la verticale. ")
+                direction = direction.upper()
+                mot=input("Entrez votre mot : ")
+                mot = mot.upper()
+          
+            i, j = lire_coords()
+          
+            a = tester_placement(plateau,i,j,direction,mot)
+            
+            while len(mot)>len(main) or len(mot)>len(sac):
+                print("Votre mot dépasse la longueur du sac ou celle de votre main.")
+                mot=input("Entrez votre mot : ")
+                mot = mot.upper()
+            while mot not in mots_jouables(mots_fr,main,a[1]):
+                print("Votre mot n'est pas jouable.")
+                mot = input("Entrez votre mot : ")
+                mot = mot.upper()
+            
+            placer_mot(plateau, main, mot, i, j, direction)
+            
+            completer_main(main, sac)
+            
+            v=valeur_mot(mot,dico)
+            
+            print("Votre mot rapporte",v,"point.")
+            score[joueuractu]+=v
+            print("Votre score est de",score[joueuractu])
+            flag=True
+
+
+        elif user.upper() == "P":
+            flag=True
+            print("Tour passé.")
+    return flag
+
+
+def prochain_joueur(indexJ,joueurs):
+
+    if indexJ==len(joueurs)-1:
+        indexJ = 0
+    else:
+        indexJ += 1
+        
+    return indexJ
+
 
 
 def fin_partie(main,sac):
@@ -351,78 +401,167 @@ def fin_partie(main,sac):
     else:
         return False
 
-#fonction qui doit faire le score
+def malus(score,main):
+    m=0
+    for j in main:
+        if len(main)==7:
+            m=m-50
+        m=valeur_mot(main, dico)
+        score[joueuractu]-=m
+    return score[joueuractu]
 
-def malus(mains,sac,joueurs,score,dico,main):
-    if fin_partie(main,sac):
-        for i in range(len(joueurs)):
-            main_joueur=mains[i]
-            joueur=joueurs[i]
-            score[joueur]-=valeur_mot(main_joueur, dico)
-
-def affiche_score(joueurs,name):
+def affiche_score(score):
     gagnant=""
-    maxx=joueurs[name]
-    for i in joueurs:
-        print(joueurs[i])
-        if joueurs[i]>maxx:
-            maxx=joueurs[i]
-            gagnant=i
-    print("Le gagnant est",gagnant,"avec",joueurs[gagnant],"points !!!")
-
-#def prochain_joueur(joueurs:list,main,sac):
- #   if fin_partie(main, sac)==False:
+    maxx=-62
+    for joueur in score:
+        print(joueur,score[joueur])
+        if score[joueur]>maxx:
+            maxx=score[joueur]
+            gagnant=joueur
+    print("Le gagnant est",gagnant,"avec",maxx,"points !!!")
 
 
 
 #PARTIE 6######################################################################
 
-def caseVide(plateau :list, i:int, j:int)-> bool:
+def casePossible(plateau :list, i:int, j:int)-> bool:
     if plateau[i-1][j-1] == '':
         return True
-    else:
+    elif plateau[i-1][j-1] != '' or i < 1 or i > 15 or j < 1 or j > 15:
         return False
 
-def lire_coords():
+def lire_coords() -> tuple :
+    
     askCoordI= int(input('Entrez une coordonée de ligne : '))
     askCoordJ= int(input('Entrez une coordonée de colonne : '))
 
 
-    while caseVide(plateau, askCoordI, askCoordJ) == False:
-        print('Case non vide.')
+    while casePossible(plateau, askCoordI, askCoordJ) == False:
+        print('Case non vide ou pas dans le plateau')
         askCoordI= int(input('Entrez une coordonée de ligne : '))
         askCoordJ= int(input('Entrez une coordonée de colonne : '))
 
     return askCoordI, askCoordJ
 
-def tester_placement(plateau, i, j, dir, mot):
+
+def tester_placement(plateau: list, i: int, j: int, dir: str, mot:str) -> tuple:   
     
+    global tour
+    
+    connected = False
+    
+    #manque sert a faire en sorte qu'on puisse poser le mot avec les lettres du plateau
+    
+    lettreNec = []
+    manque = 0
+    decalY = 0
+    decalX = 0
+    
+    
+    #on regarde si le mot est connecte avec un autre pour le placer
+    if dir == 'H':
+        for k in range(len(mot)):
+            if plateau[i-1][j-1+k] != '':
+                connected = True
+    elif dir == 'V':
+        for k in range(len(mot)):
+            if plateau[i-1+k][j-1] != '':
+                connected = True
+    
+    #si le mot depasse, ou si il n'est pas place au centre lors du premier tour, ou si il n'est pas connecte
+    if i + len(mot) - 1 > 15 or j + len(mot) - 1 > 15 or (tour == 1 and i, j != 8,8) or connected == False:
+        return [], 0
 
+    tour += 1
 
+    for letter in mot:
+    
+        #si la lettre du mot ne correspond pas a la lettre sur le plateau 
+        if (letter != plateau[i - 1 + decalY][j - 1 + decalX] and plateau[i - 1 + decalY][j - 1 + decalX] != ''):
+            return [], 0
+        
+        #on ajoute a la liste des lettre necessaires si la case est vide
+        elif plateau[i - 1 + decalY][j - 1 + decalX] == '':
+            lettreNec.append(letter)
+            manque += 1
+                       
+        if dir == 'H':
+            decalX +=1
+        elif dir == 'V':
+            decalY += 1
+    
+    
+    return lettreNec, manque
+
+def placer_mot(plateau: list, main: list, mot: str, i:int, j:int, dir: str) -> bool:
+    
+    cpt = 0
+    
+    success = True
+    
+    lettreNec = tester_placement(plateau, i, j, dir, mot)
+    
+    if lettreNec[0] == []:
+        return False
+    
+    motsPossibles = mots_jouables(mots_fr, main, lettreNec[1])
+    
+    if lettreNec[0] in main and mot in motsPossibles and len(mot) > 2:
+        
+        while cpt < len(mot):
+            for k in mot:
+                if dir == 'H':
+                    if k in main:
+                        plateau[i-1][k-1+cpt] == k
+                        main.remove(k)
+                    elif k not in main and plateau[i-1][k-1+cpt] == '' and JOKER in main:
+                        plateau[i-1][k-1+cpt] = JOKER
+                        main.remove(JOKER)
+                cpt += 1
+                           
+    return success
+    
 
 #programme principal
+dico = generer_dico()
 
-
-playeur=int(input("Combien de joueurs ? "))
-joueurs={}
-for i in range(playeur):
-    name=input("Entrez votre nom: ")
-    joueurs[name]= 0
-    
-print(joueurs)
+nbJoueur = int(input("Combien de joueurs ? "))
+joueurs = []
+for i in range(nbJoueur):
+    name = input("Entrez votre nom : ")
+    joueurs.append(name)
 
 sac = init_pioche_alea()
+
 plateau = init_jetons()
+b = init_bonus()
 
-'''
-
-score={} :
+score={}
 for i in joueurs:
-    score[joueurs]=0
+    score[i]=0
 
 mains=[]
 for i in joueurs:
     a=piocher(7, sac)
     mains.append(a)
 
-'''
+
+indexJ=0
+joueuractu = joueurs[indexJ]
+main=mains[indexJ]
+while not (fin_partie(main,sac)):
+    joueuractu = joueurs[indexJ]
+    main=mains[indexJ]
+    affiche_jetons(plateau, b)
+    print("C'est au tour de",joueuractu)
+    f=tour_joueur(indexJ,main,sac,dico,joueurs,score)
+    mains[indexJ]=main
+
+    if f:
+        indexJ=prochain_joueur(indexJ,joueurs)
+        
+for r in range(len(joueurs)):
+    malus(score,main[r])
+    affiche_score(score)
+    
+    
